@@ -1,0 +1,116 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="hero_plus" version="1.0">
+  <joint name="body_link_joint" type="fixed">
+    <origin rpy="1.57080 0.00000 0.00000" xyz="0.0001547 -0.0251026 0.0560773" />
+    <parent link="base_link" />
+    <child link="body_link" />
+  </joint>
+  <joint name="left_wheel_link_joint" type="continuous">
+    <limit effort="0.00000" velocity="0.00000" />
+    <origin rpy="0.00000 0.00000 0.00000" xyz="0.02953 0.0003468 0.0141234" />
+    <parent link="base_link" />
+    <child link="left_wheel_link" />
+    <axis xyz="1.00000 0.00000 0.00000" />
+  </joint>
+  <joint name="right_wheel_link_joint" type="continuous">
+    <limit effort="0.00000" velocity="0.00000" />
+    <origin rpy="0.00000 0.00000 0.00000" xyz="-0.029401 0.0003468 0.0141633" />
+    <parent link="base_link" />
+    <child link="right_wheel_link" />
+    <axis xyz="1.00000 0.00000 0.00000" />
+  </joint>
+  <link name="base_link">
+    <collision name="base_collision">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="-0.0001103 0.0232716 -0.0031983" />
+      <geometry>
+        <sphere radius="0.0079613" />
+      </geometry>
+      <surface><friction><ode mu="0.1" mu2="0.1"/></friction></surface>
+    </collision>
+    <collision name="base_collision.000">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.0002816 -0.0242143 -0.002371" />
+      <geometry>
+        <sphere radius="0.0090583" />
+      </geometry>
+      <surface><friction><ode mu="0.1" mu2="0.1"/></friction></surface>
+    </collision>
+    <inertial>
+      <inertia ixx="8.5e-5" ixy="0" ixz="0" iyy="8.5e-5" iyz="0.00" izz="8.5e-5" />
+      <origin rpy="0.00000 0.00000 0.00000" xyz="7.51e-05 -0.0001163 -0.0079272" />
+      <mass value="0.200" />
+    </inertial>
+    <visual name="base">
+      <material name="ABS (White)" />
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0 -0 0" />
+      <geometry>
+        <mesh filename="../meshes/dae/base_link.dae" scale="0.01 0.01 0.01" />
+      </geometry>
+    </visual>
+  </link>
+  <link name="body_link">
+    <collision name="body_collision">
+      <origin rpy="1.57080 0.00000 0.00000" xyz="-2.86e-05 -0.0111866 -0.0256706" />
+      <geometry>
+        <cylinder radius="0.0581853" length="0.0949234" />
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="9.58e-4" ixy="0.00" ixz="0.0" iyy="9.58e-4" iyz="0.0" izz="1.02e-3" />
+      <origin rpy="0.00000 0.00000 0.00000" xyz="-0.0001382 -0.0435666 -0.0252577" />
+      <mass value="0.600" />
+    </inertial>
+    <visual name="body">
+      <material name="Opaque(244,229,167)" />
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0 -0 0" />
+      <geometry>
+        <mesh filename="../meshes/dae/Body1.dae" scale="0.01 0.01 0.01" />
+      </geometry>
+    </visual>
+  </link>
+  <link name="left_wheel_link">
+    <collision name="left_wheel_collision">
+      <origin rpy="-0.00000 1.57080 0.00000" xyz="0.000109 -3.26e-05 -3.13e-05" />
+      <geometry>
+        <cylinder radius="0.0255042" length="0.0070011" />
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="1.0e-5" ixy="0.00000" ixz="0.00000" iyy="1.95e-5" iyz="-0.00017" izz="1.0e-5" />
+      <origin rpy="0.00000 0.00000 0.00000" xyz="2.18e-05 4.2e-06 8.9e-06" />
+      <mass value="0.027100" />
+    </inertial>
+    <visual name="left_wheel">
+      <material name="ABS (White)" />
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/dae/left_wheel.dae" scale="0.01 0.01 0.01" />
+      </geometry>
+    </visual>
+  </link>
+  <link name="right_wheel_link">
+    <collision name="right_wheel_collision">
+      <origin rpy="0.00000 1.57080 0.00000" xyz="-0.0001091 -3.26e-05 3.14e-05" />
+      <geometry>
+        <cylinder radius="0.02549" length="0.0069973" />
+      </geometry>
+    </collision>
+    <inertial>
+      <inertia ixx="1.0e-5" ixy="0.00000" ixz="0.00000" iyy="1.95e-5" iyz="-0.00017" izz="1.0e-5" />
+      <origin rpy="0.00000 0.00000 0.00000" xyz="-2.18e-05 4.2e-06 -8.9e-06" />
+      <mass value="0.027100" />
+    </inertial>
+    <visual name="right_wheel">
+      <material name="ABS (White)" />
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0 -0 0" />
+      <geometry>
+        <mesh filename="../meshes/dae/right_wheel.dae" scale="0.01 0.01 0.01" />
+      </geometry>
+    </visual>
+  </link>
+  <material name="ABS (White)">
+    <color rgba="0.96471 0.96471 0.95294 1.00000" />
+  </material>
+  <material name="Opaque(244,229,167)">
+    <color rgba="0.95686 0.89804 0.65490 1.00000" />
+  </material>
+</robot>

@@ -1,0 +1,3 @@
+Instantiated with filepath=None->None, scale=[1.0, 1.0, 1.0], mesh=<bpy_struct, Mesh("left_wheel") at 0x000001A68B59E480>, meshname=left_wheel, material=None, mesh_orientation=None
+->trying export of <bpy_struct, Mesh("left_wheel") at 0x000001A68B59E480> to C:\Users\varun\Desktop\urdf_hero_plus\hero_plusstable\meshes\dae\left_wheel.dae
+->wrote dae to C:\Users\varun\Desktop\urdf_hero_plus\hero_plusstable\meshes\dae\left_wheel.dae from bpy_types.Mesh
