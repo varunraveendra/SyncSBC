@@ -460,8 +460,7 @@ class ConsensusESI(Node):
             self.prev_final[robot_name] = (cur_x, cur_y, cur_z)
             return
 
-        # ----------------------------
-        # Quiet: compute signal and check stability AFTER quiet gate
+        # ---------------------------
         # ----------------------------
         cur_x = float(rid) if region_subset_of(x_entry) else float(rid - 1)
         cur_y = float(rid) if region_subset_of(y_entry) else float(rid - 1)
@@ -471,7 +470,7 @@ class ConsensusESI(Node):
         # Entering quiet for first time
         if self.quiet_since[robot_name] is None:
             self.quiet_since[robot_name] = now
-            self.stable_since[robot_name] = now  # stability timer starts AFTER quiet begins
+            self.stable_since[robot_name] = now 
             self.prev_final[robot_name] = cur
             conclude = False
         else:
@@ -490,7 +489,7 @@ class ConsensusESI(Node):
         no_token_holders = (x_owner == 0 and y_owner == 0 and z_owner == 0)
 
         if conclude and no_token_holders:
-            # latest_positive should be the time when we conclude (as you wanted)
+            # latest_positive should be the time when we conclude
             if in_any:
                 if self.latest_positive[robot_name] is None:
                     now_t = self.get_clock().now().to_msg()
@@ -564,6 +563,11 @@ class ConsensusESI(Node):
         if not hasattr(self, "epoch_local") or self.epoch_local is None:
             self.epoch_local = defaultdict(lambda: [0, 0, 0])  # robot_name -> [ep_a, ep_b, ep_c]
 
+    def _next_epoch(self, robot_name: str, k: int, observed_epoch: int) -> int:
+        e = max(self.epoch_local[robot_name][k], int(observed_epoch)) + 1
+        self.epoch_local[robot_name][k] = e
+        return e
+
     def get_swarm_state(self, robot_name: str):
         """
         Returns per-lane state as:
@@ -591,7 +595,7 @@ class ConsensusESI(Node):
         neigh_names = [k for k, v in top if v <= self.radius and self.radius > 0]
 
         # Optionally include "my own last received" if you store it in esi_state_rec
-        # (won't hurt if not present)
+      
         if robot_name in self.esi_state_rec:
             if robot_name not in neigh_names:
                 neigh_names.append(robot_name)
@@ -724,7 +728,7 @@ class ConsensusESI(Node):
             if not help_flag:
                 break
 
-        # ---- event-trigger condition (keep your original structure) ----
+        # ---- event-trigger condition ----
         
         rid = int(robot_name.split("_")[-1])
         my_tok = self._rid_to_token(rid)
@@ -736,7 +740,8 @@ class ConsensusESI(Node):
             self.informed[robot_name][k] = False
 
         informed_any = (self.informed[robot_name][0] or self.informed[robot_name][1] or self.informed[robot_name][2])
-        if not ((r_s >= self.sigma * s_s) or help_flag or (not informed_any)):
+        holds_token = any(int(swarm_state[kk][0]) == rid for kk in range(3))
+        if not ((r_s >= self.sigma * s_s) or help_flag or (not informed_any) or holds_token):
             return
 
         # ---- update local set to current preds ----
@@ -770,7 +775,8 @@ class ConsensusESI(Node):
         self.latest_binary[robot_name] = self.binary_state(con, preds, s_s, robot_name) # replace this with your favorite stage 1 consensus method
 
         
-        k = max(range(3), key=lambda i: preds[i])
+        k = next((kk for kk in range(3) if int(swarm_state[kk][0]) == rid),
+                 max(range(3), key=lambda i: preds[i]))
         suf = ["a", "b", "c"][k]
 
         # normalize robot id string (avoid "06" vs "6")
@@ -783,14 +789,23 @@ class ConsensusESI(Node):
         my_conf = bool(self.latest_binary[robot_name][k])
         token_free = (int(owner) == 0)
         i_hold = (int(owner) == rid)
-        can_edit = token_free or i_hold
+        can_edit = i_hold
+
+        for kk in range(3):
+            if self.record[robot_name][kk] is not None and int(swarm_state[kk][0]) != rid:
+                self.record[robot_name][kk] = None
 
         # If your robot id is outside 1..16, you can just no-op membership edits:
         if not my_tok:
             return
 
         
-        if i_hold and (my_tok not in members):
+        if i_hold:
+            # Give simultaneous claims one timer cycle to settle before commit.
+            if self.record[robot_name][k] == int(epoch):
+                self.record[robot_name][k] = -int(epoch)
+                return
+
             # Build message by copying current swarm state (all lanes)
             temp = Piggybacksdtec()
             temp.x = self.preds[robot_name].x
@@ -805,17 +820,20 @@ class ConsensusESI(Node):
                 setattr(temp, f"int_{ss}", self._norm_members(m))
                 setattr(temp, f"bint_{ss}", self._norm_members(m))
 
-            new_members = self._add_member(members, my_tok)
+            new_members = self._add_member(members, my_tok) if my_conf else self._del_member(members, my_tok)
+            new_epoch = self._next_epoch(robot_name, k, epoch)
 
-            setattr(temp, f"own_{suf}", rid)          # keep ownership
-            setattr(temp, f"ep_{suf}", int(epoch))    # keep epoch
+            setattr(temp, f"own_{suf}", 0)             # release ownership
+            setattr(temp, f"ep_{suf}", new_epoch)     # commit a newer version
             setattr(temp, f"int_{suf}", new_members)
             setattr(temp, f"bint_{suf}", new_members)
+            self.record[robot_name][k] = None
 
             self.get_logger().info(
-                f"[esi] {robot_name} owns lane k={k} -> init members '{members}' -> '{new_members}'"
+                f"[esi] {robot_name} releases lane k={k} -> members '{members}' -> '{new_members}'"
             )
 
+            self.esi_state_rec[robot_name] = temp
             self.esi_pubs[robot_name].publish(temp)
             self.talkto_neighbors_l1= self.talkto_neighbors_l1 + 1 if self.latest_positive[robot_name] is None else self.talkto_neighbors_l1
            
@@ -839,6 +857,18 @@ class ConsensusESI(Node):
             setattr(temp, f"inf_{ss}", 0)  # keep/ignore old field if still in msg
             setattr(temp, f"int_{ss}", self._norm_members(m))
             setattr(temp, f"bint_{ss}", self._norm_members(m))
+
+        # Claim a free token before changing membership.
+        if token_free and ((my_tok in members) != my_conf):
+            new_epoch = self._next_epoch(robot_name, k, epoch)
+            setattr(temp, f"own_{suf}", rid)
+            setattr(temp, f"ep_{suf}", new_epoch)
+            self.record[robot_name][k] = new_epoch
+            self.esi_state_rec[robot_name] = temp
+            self.esi_pubs[robot_name].publish(temp)
+            self.talkto_neighbors_l1= self.talkto_neighbors_l1 + 1 if self.latest_positive[robot_name] is None else self.talkto_neighbors_l1
+            self.last_update[robot_name] = self.get_clock().now()
+            return
 
         changed = False
 
@@ -916,7 +946,7 @@ def main():
                 # keep executor alive so callbacks/joins can run
                 exec.spin_until_future_complete(fut, timeout_sec=5.0)
             else:
-                # Fallback: sync cleanup() (your current method)
+                # Fallback: sync cleanup() 
                 node.cleanup()
         except Exception as e:
             node.get_logger().warn(f"cleanup error: {e}")
